@@ -39,4 +39,9 @@ public class LogModel {
         this.operationType = operationType;
     }
 
+    @Override
+    public String toString() {
+        return userID + "," + timestamp + "," + operationType;
+    }
+
 }

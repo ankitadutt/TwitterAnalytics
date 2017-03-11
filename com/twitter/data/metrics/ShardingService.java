@@ -5,6 +5,7 @@
  */
 package com.twitter.data.metrics;
 
+import com.twitter.data.metrics.Model.LogModel;
 import com.twitter.data.metrics.Util.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,7 +17,7 @@ import java.util.List;
 
 /**
  *
- * @author ankit
+ * @author ankita
  */
 public class ShardingService {
 
@@ -25,13 +26,17 @@ public class ShardingService {
     //List<PrintWriter> writers;
     List<BufferedWriter> writers;
     List<String> shardFiles;
-
+    BufferedWriter writer;
     BufferedReaderIterator readerIter;
-
+    String shardFile;
     public ShardingService() {
         //writers = new ArrayList<PrintWriter>();
         writers = new ArrayList<>();
         shardFiles = new ArrayList<>();
+    }
+    
+    public ShardingService(String filename){
+        this.shardFile = filename;
     }
 
     public List<String> createShards(String inputFile) throws IOException {
@@ -54,6 +59,20 @@ public class ShardingService {
         }
        return shardFiles;
     }
+    
+    //The method handles cases where a shard is still too big for memory (because of uneven distribution of ids)
+    public BufferedWriter createNewShard(LogModel log) throws IOException{
+        FileWriter fw = new FileWriter(shardFile);
+        writer = new BufferedWriter(fw);
+        writer = addToShard(writer,log);
+        return writer;
+    }
+    
+    
+    public BufferedWriter addToShard(BufferedWriter writer, LogModel log) throws IOException{
+       writer.write(log.toString());
+    return writer;
+    }
 
     private void createShardFiles(String filePath) {
             String fileName;
@@ -62,7 +81,6 @@ public class ShardingService {
         try {
             for (int i = 0; i < shards; i++) {
                 fileName = filePath+"shard"+Integer.toString(i);
-                File file = new File(fileName);
                 fw = new FileWriter(fileName);
                 shardFiles.add(fileName);
                 //String file = FileUtil.createShard(fileName);
@@ -78,6 +96,7 @@ public class ShardingService {
         }
 
     }
+    
 
     private void addToShard(Long userId, String data) {
         try {

@@ -18,5 +18,6 @@ public class Constants {
     public static final String OUTPUT_FILE="MetricsOutput.txt";
     public static final String INPUT_PATH="D:/";
     public static final String OUTPUT_PATH="D:/";
-    
+    public static final String INPUT_FILE="testTwitter.txt";
+
 }

@@ -11,8 +11,8 @@ package com.twitter.data.metrics.Model;
  */
 public class AggregateModel {
     private Long userId;
-    private Long totalDuration;
-    private Long totalEntries;
+    private Long totalDuration = 0L;
+    private Long totalEntries = 0L;
 
     public Long getUserId() {
         return userId;

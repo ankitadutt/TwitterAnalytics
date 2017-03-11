@@ -5,8 +5,8 @@
  */
 package com.twitter.data.metrics;
 
+import com.twitter.data.metrics.Util.Constants;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,16 +17,15 @@ public class TwitterDataMetrics {
 
     /**
      * @param args the command line arguments
+     * @throws java.io.IOException
      */
     public static void main(String[] args) throws IOException {
         ShardingService ss = new ShardingService();
-        List<String> shardFiles = new ArrayList<String>();
-        shardFiles = ss.createShards("D:/testTwitter.txt");
-        AggregatorService as = new AggregatorService(shardFiles);
-        as.aggregateData();
-        
-        
-        //
+        List<String> shardFiles = ss.createShards(Constants.INPUT_PATH + Constants.INPUT_FILE);
+        if (shardFiles != null) {
+            AggregatorService as = new AggregatorService(shardFiles);
+            as.aggregateData();
+        }
     }
-    
+
 }
