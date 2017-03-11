@@ -9,7 +9,7 @@ package com.twitter.data.metrics.Model;
 public class AggregateModel {
     private Long userId;
     private Long totalDuration = 0L;
-    private Long totalEntries = 1L; 
+    private Long totalEntries = 0L; 
     private long timestamp;
     private String operationType;
 
@@ -45,10 +45,16 @@ public class AggregateModel {
         this.totalDuration = totalDuration;
     }
 
-    @Override
+    /*@Override
     public String toString() {
         return totalDuration + "," + totalEntries;
+    }*/
+
+    @Override
+    public String toString() {
+        return "AggregateModel{" + "userId=" + userId + ", totalDuration=" + totalDuration + ", totalEntries=" + totalEntries + ", timestamp=" + timestamp + ", operationType=" + operationType + '}';
     }
+    
 
     public Long getTotalEntries() {
         return totalEntries;

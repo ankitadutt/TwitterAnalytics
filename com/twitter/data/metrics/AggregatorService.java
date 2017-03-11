@@ -28,6 +28,7 @@ public class AggregatorService {
     private String fileName;
     //capacity is not expected to exceed above 2,147,483,648
     private static final int capacity = 2;
+    private BufferedWriter sm = null;
 
     private AggregatorService() {
     }
@@ -66,15 +67,16 @@ public class AggregatorService {
                 if (aggregateMap.size() == capacity && !aggregateMap.containsKey(aggregateModel.getUserId())) {
                     newShardManager(inputFile, aggregateModel);
                 } else {
-                    if (aggregateModel.getOperationType().equals("open")) {
-                        userTickManager(aggregateModel);
-                    }
-                    if (aggregateModel.getOperationType().equals("close")) {
-                        //do something?
+                if (aggregateModel.getOperationType().equals("open")) {
+                    userTickManager(aggregateModel);
+                }
+                if (aggregateModel.getOperationType().equals("close")) {
+                    userTickManager(aggregateModel);
+
                     }
                 }
             }
-            writeToOutputFile();
+            FileUtil.createOutputFile(null, aggregateMap);//writeToOutputFile();
 
         } catch (Exception ex) {
             System.out.println("Unable to process data for file - " + fileName);
@@ -109,15 +111,17 @@ public class AggregatorService {
 
     public void newShardManager(String inputFile, AggregateModel log) throws IOException {
         String newFile = inputFile + "_1";
-        BufferedWriter writer = null;
-        ShardingService ss = new ShardingService(newFile);
-        if (!unprocessed.contains(newFile)) {
-            writer = ss.createNewShard(log);
+        //ShardingService ss = new ShardingService(newFile);//use a common object throughout the class
+        /*if (!unprocessed.contains(newFile)) {
+            sm = ss.createNewShard(log);
             unprocessed.add(newFile);
         } else {
-            writer = ss.addToShard(writer, log);
+            sm = ss.addToShard(sm, log);
         }
-        FileUtil.closeFile(writer);
+        FileUtil.closeFile(sm);*/
+        String line = log.getUserId()+","+log.getTimestamp()+","+log.getOperationType();
+        FileUtil.createFileShard(newFile, line);
+        unprocessed.add(newFile);
     }
 
     //changes to policy can be updated here
@@ -125,23 +129,30 @@ public class AggregatorService {
         if (log == null) {
             return;
         }
-        AggregateModel newModel;
+        AggregateModel newModel = new AggregateModel();
         try {
             if (aggregateMap.containsKey(log.getUserId())) {
                 AggregateModel temp = aggregateMap.get(log.getUserId());
-                Long newDuration = calculateDuration(temp, log);
-                Long entries = log.getTotalEntries() + 1;
-                if (newDuration != -1) {
-                    newModel = new AggregateModel();
+                if (log.getOperationType().equals("close") && temp.getOperationType().equals("open")) {
+                    Long newDuration = Calculator.calculateDuration(temp, log) + temp.getTotalDuration();
+                    if (newDuration == -1) {
+                        newDuration = temp.getTotalDuration(); //ignore the errored entry
+                    }
+                    Long entries = temp.getTotalEntries() + 1;
                     newModel.setUserId(log.getUserId());
                     newModel.setTotalDuration(newDuration);
                     newModel.setTotalEntries(entries);
                 } else {
-                    newModel = log;
+                    newModel.setTotalDuration(temp.getTotalDuration());
+                    newModel.setTotalEntries(temp.getTotalEntries());
+                    newModel.setTimestamp(log.getTimestamp());
+                    newModel.setOperationType(log.getOperationType());
                 }
+                newModel.setUserId(log.getUserId());
                 aggregateMap.put(newModel.getUserId(), newModel);
+            } else {
+                aggregateMap.put(log.getUserId(), log);
             }
-            aggregateMap.put(log.getUserId(), log);
         } catch (Exception ex) {
 
             System.out.println("Error updating data in map " + ex.getMessage().toString());
@@ -149,23 +160,6 @@ public class AggregatorService {
 
     }
 
-    //maintains a list of all file names and runs the aggregation on each file to calculate the output
-    private long calculateDuration(AggregateModel oldModel, AggregateModel newModel) {
-        Long duration = 0L;
-        if (oldModel == null || newModel == null) {
-            return -1L;
-        }
-        try {
-            if (oldModel.getOperationType().equals("open") && newModel.getOperationType().equals("close")) {
-                Long closeTick = newModel.getTimestamp();
-                Long openTick = oldModel.getTimestamp();
-                duration = closeTick - openTick;
-            }
-        } catch (Exception ex) {
-            System.out.println("Error calculating duration for the user " + ex.getMessage());
-        }
-        return duration;
-    }
 
     //check where should this file be placed logically
     private AggregateModel getDataObject(String currentLine) {
@@ -184,7 +178,7 @@ public class AggregatorService {
     }
 
     //put this in a separate class
-    private void writeToOutputFile() throws IOException {
+    /*private void writeToOutputFile() throws IOException {
         fileName = Constants.OUTPUT_PATH + Constants.OUTPUT_FILE;
         FileWriter fw = null;
         BufferedWriter bw = null;
@@ -202,6 +196,5 @@ public class AggregatorService {
         } finally {
             FileUtil.closeFile(bw);
         }
-    }
-
+    }*/
 }
