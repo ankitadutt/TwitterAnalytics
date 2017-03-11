@@ -5,10 +5,6 @@
  */
 package com.twitter.data.metrics.Util;
 
-/**
- *
- * @author ankit
- */
 public class Constants {
     
     public static final int MEMORY_IN_MB = 500;

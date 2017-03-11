@@ -9,10 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Iterator;
 
-/**
- *
- * @author ankita
- */
+
 public class BufferedReaderIterator implements Iterable<String> {
 
     private BufferedReader r;

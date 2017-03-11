@@ -5,29 +5,21 @@
  */
 package com.twitter.data.metrics;
 
-import com.twitter.data.metrics.Model.LogModel;
+import com.twitter.data.metrics.Model.AggregateModel;
 import com.twitter.data.metrics.Util.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- * @author ankita
- */
+
 public class ShardingService {
 
-    BufferedReader reader;
     final int shards = Constants.NUM_SHARDS;
-    //List<PrintWriter> writers;
     List<BufferedWriter> writers;
     List<String> shardFiles;
-    BufferedWriter writer;
-    BufferedReaderIterator readerIter;
     String shardFile;
     public ShardingService() {
         //writers = new ArrayList<PrintWriter>();
@@ -40,6 +32,8 @@ public class ShardingService {
     }
 
     public List<String> createShards(String inputFile) throws IOException {
+        BufferedReader reader;
+        BufferedReaderIterator readerIter;
         try {
             reader = FileUtil.openFile(inputFile);
             readerIter = new BufferedReaderIterator(reader);
@@ -61,16 +55,18 @@ public class ShardingService {
     }
     
     //The method handles cases where a shard is still too big for memory (because of uneven distribution of ids)
-    public BufferedWriter createNewShard(LogModel log) throws IOException{
+    public BufferedWriter createNewShard(AggregateModel log) throws IOException{
+        //first time when this is created, create a writer and add it to the map of this shard
         FileWriter fw = new FileWriter(shardFile);
-        writer = new BufferedWriter(fw);
+        BufferedWriter writer = new BufferedWriter(fw);
         writer = addToShard(writer,log);
         return writer;
     }
     
     
-    public BufferedWriter addToShard(BufferedWriter writer, LogModel log) throws IOException{
-       writer.write(log.toString());
+    public BufferedWriter addToShard(BufferedWriter writer, AggregateModel log) throws IOException{
+       String line = log.getUserId()+","+log.getTimestamp()+","+log.getOperationType();
+       writer.write(line);
     return writer;
     }
 
@@ -83,12 +79,7 @@ public class ShardingService {
                 fileName = filePath+"shard"+Integer.toString(i);
                 fw = new FileWriter(fileName);
                 shardFiles.add(fileName);
-                //String file = FileUtil.createShard(fileName);
-                //System.out.println(file);
-                
-                //writer = FileUtil.getFileWriter("D:/output.txt");
                 writer = new BufferedWriter(fw);
-                //PrintWriter writer = new PrintWriter(fileName);
                 writers.add(writer);
             }
         } catch (Exception ex) {
@@ -100,7 +91,6 @@ public class ShardingService {
 
     private void addToShard(Long userId, String data) {
         try {
-            //writers.get((int) (userId % shards))..println(data);
             writers.get((int) (userId % shards)).write(data);
             writers.get((int) (userId % shards)).newLine();
         } catch (Exception ex) {

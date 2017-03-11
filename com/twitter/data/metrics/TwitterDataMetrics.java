@@ -9,10 +9,7 @@ import com.twitter.data.metrics.Util.Constants;
 import java.io.IOException;
 import java.util.List;
 
-/**
- *
- * @author ankit
- */
+
 public class TwitterDataMetrics {
 
     /**

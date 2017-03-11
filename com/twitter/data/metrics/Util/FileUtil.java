@@ -13,10 +13,6 @@ import java.io.InputStreamReader;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-/**
- *
- * @author ankita
- */
 public class FileUtil {
 
     public static BufferedReader openFile(String filePath) throws FileNotFoundException {

@@ -5,14 +5,13 @@
  */
 package com.twitter.data.metrics.Model;
 
-/**
- *
- * @author ankita
- */
+
 public class AggregateModel {
     private Long userId;
     private Long totalDuration = 0L;
-    private Long totalEntries = 0L;
+    private Long totalEntries = 1L; 
+    private long timestamp;
+    private String operationType;
 
     public Long getUserId() {
         return userId;
@@ -20,6 +19,22 @@ public class AggregateModel {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getOperationType() {
+        return operationType;
+    }
+
+    public void setOperationType(String operationType) {
+        this.operationType = operationType;
     }
 
     public Long getTotalDuration() {
