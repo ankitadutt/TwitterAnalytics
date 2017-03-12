@@ -5,12 +5,14 @@
  */
 package com.twitter.data.metrics.Model;
 
+import java.util.Objects;
+
 
 public class AggregateModel {
     private Long userId;
     private Long totalDuration = 0L;
     private Long totalEntries = 0L; 
-    private long timestamp;
+    private Long timestamp;
     private String operationType;
 
     public Long getUserId() {
@@ -21,11 +23,11 @@ public class AggregateModel {
         this.userId = userId;
     }
 
-    public long getTimestamp() {
+    public Long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -39,6 +41,39 @@ public class AggregateModel {
 
     public Long getTotalDuration() {
         return totalDuration;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 53 * hash + Objects.hashCode(this.userId);
+        hash = 53 * hash + Objects.hashCode(this.timestamp);
+        hash = 53 * hash + Objects.hashCode(this.operationType);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final AggregateModel other = (AggregateModel) obj;
+        if (!Objects.equals(this.operationType, other.operationType)) {
+            return false;
+        }
+        if (!Objects.equals(this.userId, other.userId)) {
+            return false;
+        }
+        if (!Objects.equals(this.timestamp, other.timestamp)) {
+            return false;
+        }
+        return true;
     }
 
     public void setTotalDuration(Long totalDuration) {

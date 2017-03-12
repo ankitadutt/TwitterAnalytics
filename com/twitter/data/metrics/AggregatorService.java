@@ -6,13 +6,12 @@
 package com.twitter.data.metrics;
 
 import com.twitter.data.metrics.Model.AggregateModel;
+import com.twitter.data.metrics.Policy.Policy;
 import com.twitter.data.metrics.Util.BufferedReaderIterator;
-import com.twitter.data.metrics.Util.Constants;
 import com.twitter.data.metrics.Util.FileUtil;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,26 +20,28 @@ import java.util.Set;
 
 public class AggregatorService {
 
-    private List<String> shardFiles;
     private Map<Long, AggregateModel> aggregateMap;
     private Set<String> unprocessed;
     private Set<String> processed;
     private String fileName;
-    //capacity is not expected to exceed above 2,147,483,648
-    private static final int capacity = 2;
-    private BufferedWriter sm = null;
+    private final String policy;
+    private final long capacity;
 
-    private AggregatorService() {
-    }
 
-    public AggregatorService(List<String> shardFiles) {
-        this.shardFiles = shardFiles;
+    /**
+     *
+     * @param shardFiles
+     */
+    public AggregatorService(List<String> shardFiles, String policy, Long capacity) {
         this.unprocessed = new HashSet<>(shardFiles);
+        this.policy = policy;
         processed = new HashSet<>();
         aggregateMap = new HashMap();
+        this.capacity = capacity;
     }
 
-    public void aggregateData() {
+    public List<String> aggregateData() {
+        List<String> newShards = new ArrayList<>();
         try {
             for (String file : unprocessed) {
                 if (processed.contains(file)) {
@@ -52,6 +53,9 @@ public class AggregatorService {
         } catch (Exception ex) {
             System.out.println("Unable to aggregate data: " + ex.getMessage());
         }
+        unprocessed.removeAll(processed);
+        newShards.addAll(unprocessed);
+        return newShards;
     }
 
     private void aggregateDataForFile(String inputFile) {
@@ -59,21 +63,15 @@ public class AggregatorService {
         BufferedReaderIterator iter;
         BufferedReader reader = null;
         try {
-            aggregateModel = new AggregateModel();
             reader = FileUtil.openFile(inputFile);
             iter = new BufferedReaderIterator(reader);
             for (String line : iter) {
                 aggregateModel = getDataObject(line);
+                //when the in-memory capacity should not be overloaded
                 if (aggregateMap.size() == capacity && !aggregateMap.containsKey(aggregateModel.getUserId())) {
-                    newShardManager(inputFile, aggregateModel);
+                    newShardManager(inputFile, aggregateModel);//request another shard
                 } else {
-                if (aggregateModel.getOperationType().equals("open")) {
                     userTickManager(aggregateModel);
-                }
-                if (aggregateModel.getOperationType().equals("close")) {
-                    userTickManager(aggregateModel);
-
-                    }
                 }
             }
             FileUtil.createOutputFile(null, aggregateMap);//writeToOutputFile();
@@ -87,40 +85,10 @@ public class AggregatorService {
         }
     }
 
-    private void aggregateMapManager(long duration, AggregateModel log) {
-        if (log == null) {
-            return;
-        }
-        AggregateModel aggregateModel;
-        try {
-            aggregateModel = log;
-            if (aggregateMap.containsKey(aggregateModel.getUserId())) {
-                aggregateModel = aggregateMap.get(aggregateModel.getUserId());
-                aggregateModel.setTotalDuration(duration + aggregateModel.getTotalDuration());
-                aggregateModel.setTotalEntries(aggregateModel.getTotalEntries() + 1);
-            } else {
-                aggregateModel.setUserId(log.getUserId());
-                aggregateModel.setTotalEntries(1L);
-                aggregateModel.setTotalDuration(duration);
-            }
-            aggregateMap.put(log.getUserId(), aggregateModel);
-        } catch (Exception ex) {
-            System.out.println("Aggregate Map Manager");
-        }
-    }
-
-    public void newShardManager(String inputFile, AggregateModel log) throws IOException {
+    private void newShardManager(String inputFile, AggregateModel log) throws IOException {
         String newFile = inputFile + "_1";
-        //ShardingService ss = new ShardingService(newFile);//use a common object throughout the class
-        /*if (!unprocessed.contains(newFile)) {
-            sm = ss.createNewShard(log);
-            unprocessed.add(newFile);
-        } else {
-            sm = ss.addToShard(sm, log);
-        }
-        FileUtil.closeFile(sm);*/
-        String line = log.getUserId()+","+log.getTimestamp()+","+log.getOperationType();
-        FileUtil.createFileShard(newFile, line);
+        String line = log.getUserId() + "," + log.getTimestamp() + "," + log.getOperationType();
+        FileUtil.createFile(newFile, line);
         unprocessed.add(newFile);
     }
 
@@ -134,34 +102,43 @@ public class AggregatorService {
             if (aggregateMap.containsKey(log.getUserId())) {
                 AggregateModel temp = aggregateMap.get(log.getUserId());
                 if (log.getOperationType().equals("close") && temp.getOperationType().equals("open")) {
-                    Long newDuration = Calculator.calculateDuration(temp, log) + temp.getTotalDuration();
+                    Long newDuration = CalculatorService.calculateDuration(temp, log) + temp.getTotalDuration();
                     if (newDuration == -1) {
                         newDuration = temp.getTotalDuration(); //ignore the errored entry
                     }
                     Long entries = temp.getTotalEntries() + 1;
-                    newModel.setUserId(log.getUserId());
                     newModel.setTotalDuration(newDuration);
                     newModel.setTotalEntries(entries);
-                } else {
+                    newModel.setTimestamp(log.getTimestamp());
+                    newModel.setOperationType(log.getOperationType());
+                } else if(log.getOperationType().equals(temp.getOperationType())){
+                    if(policy.toUpperCase().equals("UPDATE_WITH_CURRENT"))
+                    newModel = Policy.updateDurationWithCurrent(temp, log);
+                    else
+                    newModel = Policy.ignoreFirstWrongEntry(temp, log);
+                }
+                else{
+                    
                     newModel.setTotalDuration(temp.getTotalDuration());
                     newModel.setTotalEntries(temp.getTotalEntries());
                     newModel.setTimestamp(log.getTimestamp());
                     newModel.setOperationType(log.getOperationType());
+                
                 }
                 newModel.setUserId(log.getUserId());
+                System.out.println(newModel.toString());
                 aggregateMap.put(newModel.getUserId(), newModel);
             } else {
+                //First log entry for userid
                 aggregateMap.put(log.getUserId(), log);
             }
         } catch (Exception ex) {
 
-            System.out.println("Error updating data in map " + ex.getMessage().toString());
+            System.out.println("Error updating data in map " + ex.getMessage());
         }
 
     }
 
-
-    //check where should this file be placed logically
     private AggregateModel getDataObject(String currentLine) {
         AggregateModel aggregateModel = new AggregateModel();
         try {
@@ -177,24 +154,4 @@ public class AggregatorService {
         return aggregateModel;
     }
 
-    //put this in a separate class
-    /*private void writeToOutputFile() throws IOException {
-        fileName = Constants.OUTPUT_PATH + Constants.OUTPUT_FILE;
-        FileWriter fw = null;
-        BufferedWriter bw = null;
-        try {
-            fw = new FileWriter(fileName);
-            bw = new BufferedWriter(fw);
-            for (AggregateModel m : aggregateMap.values()) {
-                double avg = m.getTotalDuration() / m.getTotalEntries();
-                bw.write(String.valueOf(m.getUserId()) + "," + String.valueOf(avg));
-                bw.newLine();
-            }
-
-        } catch (Exception ex) {
-            System.out.println("Error writing to final output file "+ex.getMessage().toString());
-        } finally {
-            FileUtil.closeFile(bw);
-        }
-    }*/
 }

@@ -5,7 +5,6 @@
  */
 package com.twitter.data.metrics;
 
-import com.twitter.data.metrics.Model.AggregateModel;
 import com.twitter.data.metrics.Util.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -17,18 +16,14 @@ import java.util.List;
 
 public class ShardingService {
 
-    final int shards = Constants.NUM_SHARDS;
+    final int shards;
     List<BufferedWriter> writers;
     List<String> shardFiles;
     String shardFile;
-    public ShardingService() {
-        //writers = new ArrayList<PrintWriter>();
+    public ShardingService(int shards) {
         writers = new ArrayList<>();
         shardFiles = new ArrayList<>();
-    }
-    
-    public ShardingService(String filename){
-        this.shardFile = filename;
+        this.shards = shards;
     }
 
     public List<String> createShards(String inputFile) throws IOException {
@@ -54,22 +49,6 @@ public class ShardingService {
        return shardFiles;
     }
     
-    //The method handles cases where a shard is still too big for memory (because of uneven distribution of ids)
-    public BufferedWriter createNewShard(AggregateModel log) throws IOException{
-        //first time when this is created, create a writer and add it to the map of this shard
-        FileWriter fw = new FileWriter(shardFile);
-        BufferedWriter writer = new BufferedWriter(fw);
-        writer = addToShard(writer,log);
-        return writer;
-    }
-    
-    
-    public BufferedWriter addToShard(BufferedWriter writer, AggregateModel log) throws IOException{
-       String line = log.getUserId()+","+log.getTimestamp()+","+log.getOperationType();
-       writer.write(line);
-    return writer;
-    }
-
     private void createShardFiles(String filePath) {
             String fileName;
             BufferedWriter writer = null;
@@ -88,7 +67,7 @@ public class ShardingService {
 
     }
     
-
+    
     private void addToShard(Long userId, String data) {
         try {
             writers.get((int) (userId % shards)).write(data);
@@ -99,5 +78,4 @@ public class ShardingService {
 
     }
     
-    //handle overflowing shards
 }

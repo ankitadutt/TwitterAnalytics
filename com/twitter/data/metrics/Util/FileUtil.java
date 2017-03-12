@@ -1,5 +1,6 @@
 package com.twitter.data.metrics.Util;
 
+import com.twitter.data.metrics.CalculatorService;
 import com.twitter.data.metrics.Model.AggregateModel;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -71,16 +72,16 @@ public class FileUtil {
                 BufferedWriter bw = new BufferedWriter(fw);
                 PrintWriter out = new PrintWriter(bw)) {
             for (AggregateModel model : map.values()) {
-                out.println(model.getUserId() + "," + model.getTotalDuration() + "," + model.getTotalEntries());
+                out.println(model.getUserId() + "," + model.getTotalDuration() + "," + model.getTotalEntries()+","+CalculatorService.calculateAverage(model));
 
             }
         } catch (IOException e) {
-            System.out.println("Error writing to final output file " + e.getMessage().toString());
+            System.out.println("Error writing to final output file " + e.getMessage());
         }
 
     }
 
-    public static void createFileShard(String file, String line) {
+    public static void createFile(String file, String line) {
         if (file == null) {
             return;
         }
@@ -89,7 +90,7 @@ public class FileUtil {
                 PrintWriter out = new PrintWriter(bw)) {
             out.println(line);
         } catch (IOException e) {
-            System.out.println("Error writing to final output file " + e.getMessage().toString());
+            System.out.println("Error writing to final output file " + e.getMessage());
         }
 
     }

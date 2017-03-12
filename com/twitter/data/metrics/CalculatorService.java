@@ -11,8 +11,8 @@ import com.twitter.data.metrics.Model.AggregateModel;
  *
  * @author ankita
  */
-public class Calculator {
-    
+public class CalculatorService {
+
     //maintains a list of all file names and runs the aggregation on each file to calculate the output
     public static long calculateDuration(AggregateModel oldModel, AggregateModel newModel) {
         Long duration = 0L;
@@ -28,5 +28,18 @@ public class Calculator {
         }
         return duration;
     }
-    
+
+    public static double calculateAverage(AggregateModel model) {
+        double avg = 0;
+        try {
+            if (model.getTotalEntries() == 0) {
+                avg = model.getTotalDuration();
+            } else {
+                avg = model.getTotalDuration() / model.getTotalEntries();
+            }
+        } catch (Exception ex) {
+            System.out.println("Error calculating average " + ex.getMessage());
+        }
+        return avg;
+    }
 }
