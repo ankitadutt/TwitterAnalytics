@@ -25,7 +25,7 @@ public class BufferedReaderIterator implements Iterable<String> {
             @Override
             public boolean hasNext() {
                 try {
-                    r.mark(1);
+                    r.mark(2);
                     if (r.read() < 0) {
                         return false;
                     }

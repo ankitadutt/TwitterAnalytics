@@ -16,11 +16,11 @@ import java.util.List;
 
 public class ShardingService {
 
-    final int shards;
+    final long shards;
     List<BufferedWriter> writers;
     List<String> shardFiles;
     String shardFile;
-    public ShardingService(int shards) {
+    public ShardingService(long shards) {
         writers = new ArrayList<>();
         shardFiles = new ArrayList<>();
         this.shards = shards;
@@ -37,6 +37,7 @@ public class ShardingService {
                 String[] inputLine = line.split(Constants.SEPARATOR);
                 Long userId = Long.parseLong(inputLine[0]);
                 addToShard(userId, line);
+                System.out.println(line);
             }
         } catch (Exception ex) {
             System.out.println("Error creating shards " + ex.getMessage());
@@ -62,7 +63,7 @@ public class ShardingService {
                 writers.add(writer);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            System.out.println("Error creating shard file "+ex.getMessage());
         }
 
     }
@@ -73,7 +74,7 @@ public class ShardingService {
             writers.get((int) (userId % shards)).write(data);
             writers.get((int) (userId % shards)).newLine();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            System.out.println("Error adding to shard userid:" +userId +"data "+data+ "message "+ex.getMessage());
         }
 
     }

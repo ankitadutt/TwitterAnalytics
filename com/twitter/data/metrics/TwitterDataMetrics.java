@@ -6,60 +6,68 @@
 package com.twitter.data.metrics;
 
 import com.twitter.data.metrics.Util.Constants;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
-
+import java.util.Properties;
 
 public class TwitterDataMetrics {
-    
-    private static final Long MAX_USERS, MEMORY;
-    private static final int SHARDS;
-    private static String policy;
-    private static final Long ALLOC_PER_SHARD;
 
-    static {
-        try {
-            MAX_USERS = Long.parseLong(System.getProperty("MAX_USERS"));
-            MEMORY = Long.parseLong(System.getProperty("MEMORY"));
-            if(MAX_USERS==null || MEMORY==null){
-                SHARDS=Constants.NUM_SHARDS;
-                ALLOC_PER_SHARD = Constants.CAPACITY;
-            }
-            else{
-                //While processing a shard in-memory, the system stores approx. 56 bytes of data per user
-                //The calculation below approximates the 56 bytes to 80
-                SHARDS=(int)(MAX_USERS*10*8)/(int)(MEMORY*1024*1024);
-                ALLOC_PER_SHARD = MAX_USERS/SHARDS;
-            }
-            String policy = System.getProperty("POLICY");
-            if (policy == null) {
-                policy = "IGNORE_MISSING";
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to initialize system properties");
-        }
-    }
+    private static Long MAX_USERS = Constants.NUMBER_OF_USERS;
+    private static Long MEMORY = Constants.MEMORY_IN_MB;
+    private static Long SHARDS;
+    private static String POLICY = null;
+    private static Long ALLOC_PER_SHARD = Constants.CAPACITY;
 
     /**
+     * @param <error>
      * @param args the command line arguments
      * @throws java.io.IOException
      */
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
-            throw new IllegalArgumentException("Please provide input file path");
+            throw new IllegalArgumentException("Please specify input file path, users, memory and policy");
         }
-        String input = args[0].trim();
-        
-        ShardingService ss = new ShardingService(SHARDS);
-        List<String> shardFiles = ss.createShards(input + Constants.INPUT_FILE);
-        //Loop until any new shards have been created
-        while (shardFiles.size()>0) {
-            System.out.print("inside main");
-            AggregatorService as = new AggregatorService(shardFiles,policy, ALLOC_PER_SHARD);
-            //method returns new shard files for a shard too big for in-memory processing
-            shardFiles = as.aggregateData();
-            System.out.println("processing new shard..."+shardFiles);
-        }
-    }
+        try {
+            String input = args[0].trim();
+            MAX_USERS = Long.parseLong(args[1].trim());
+            System.out.println("Max-Users = " + MAX_USERS);
+            MEMORY = Long.parseLong(args[2].trim());
+            System.out.println("Memory = " + MEMORY);
+            POLICY = args[3].trim();
+            System.out.println("Policy = " + POLICY);
 
+            //While processing a shard in-memory, the system stores approx. 56 bytes of data per user
+            //The calculation below approximates the 56 bytes to 80
+            if (MEMORY != 0) {
+                SHARDS = (MAX_USERS * 10 * 8) / (MEMORY * 1024 * 1024);
+            }
+            if (SHARDS == 0 || SHARDS == null) {
+                SHARDS = Constants.NUM_SHARDS;
+            }
+            if (MAX_USERS != 0) {
+                ALLOC_PER_SHARD = MAX_USERS / SHARDS;
+            }
+
+            if (POLICY == null) {
+                POLICY = "IGNORE_MISSING";
+            }
+
+            ShardingService ss = new ShardingService(SHARDS);
+            List<String> shardFiles = ss.createShards(input);
+            //Loop until any new shards have been created
+            while (shardFiles.size() > 0) {
+                System.out.println("Shards created");
+                AggregatorService as = new AggregatorService(shardFiles, POLICY, ALLOC_PER_SHARD);
+                //method returns new shard files for a shard too big for in-memory processing
+                shardFiles = as.aggregateData();
+                if (shardFiles.size() > 0) {
+                    System.out.println("processing new shard..." + shardFiles);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to initialize with the given parameters. Please try again.");
+        }
+
+    }
 }
