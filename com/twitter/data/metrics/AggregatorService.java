@@ -31,6 +31,8 @@ public class AggregatorService {
     /**
      *
      * @param shardFiles
+     * @param policy
+     * @param capacity
      */
     public AggregatorService(List<String> shardFiles, String policy, Long capacity) {
         this.unprocessed = new HashSet<>(shardFiles);
@@ -39,7 +41,10 @@ public class AggregatorService {
         aggregateMap = new HashMap();
         this.capacity = capacity;
     }
-
+    
+    /*
+     * This method accepts a shard file and aggregates all user ticks available in the shard
+     */
     public List<String> aggregateData() {
         List<String> newShards = new ArrayList<>();
         try {
@@ -53,11 +58,16 @@ public class AggregatorService {
         } catch (Exception ex) {
             System.out.println("Unable to aggregate data: " + ex.getMessage());
         }
+        //remove all the shards that have been processed in this run
         unprocessed.removeAll(processed);
+        //return control to main method with the list of new shards that were generated as a part of this run
         newShards.addAll(unprocessed);
         return newShards;
     }
-
+    
+    /*
+     * This method accepts a shard file and aggregates all user ticks available in the shard
+     */
     private void aggregateDataForFile(String inputFile) {
         AggregateModel aggregateModel;
         BufferedReaderIterator iter;
@@ -67,14 +77,14 @@ public class AggregatorService {
             iter = new BufferedReaderIterator(reader);
             for (String line : iter) {
                 aggregateModel = getDataObject(line);
-                //when the in-memory capacity should not be overloaded
+                //when the in-memory capacity is overloaded
                 if (aggregateMap.size() == capacity && !aggregateMap.containsKey(aggregateModel.getUserId())) {
                     newShardManager(inputFile, aggregateModel);//request another shard
                 } else {
                     userTickManager(aggregateModel);
                 }
             }
-            FileUtil.createOutputFile(null, aggregateMap);//writeToOutputFile();
+            FileUtil.createOutputFile(inputFile, aggregateMap);//write to ouput file
 
         } catch (Exception ex) {
             System.out.println("Unable to process data for file - " + fileName);
@@ -84,7 +94,10 @@ public class AggregatorService {
             aggregateMap.clear();
         }
     }
-
+    
+     /*
+     * This method is called for recursively sharding a shard which is bigger than what can be processed within memory limits
+     */
     private void newShardManager(String inputFile, AggregateModel log) throws IOException {
         String newFile = inputFile + "_1";
         String line = log.getUserId() + "," + log.getTimestamp() + "," + log.getOperationType();
@@ -92,7 +105,10 @@ public class AggregatorService {
         unprocessed.add(newFile);
     }
 
-    //changes to policy can be updated here
+    /*
+     * This method updates the existing values in the AggregatorModel based on the latest log input
+     * and the policy selected at runtime
+     */
     private void userTickManager(AggregateModel log) {
         if (log == null) {
             return;
@@ -138,7 +154,10 @@ public class AggregatorService {
         }
 
     }
-
+    
+    /*
+     * Converts each line of log into an object of type AggregateModel
+    */
     private AggregateModel getDataObject(String currentLine) {
         AggregateModel aggregateModel = new AggregateModel();
         try {

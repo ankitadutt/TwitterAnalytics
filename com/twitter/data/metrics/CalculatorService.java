@@ -13,7 +13,9 @@ import com.twitter.data.metrics.Model.AggregateModel;
  */
 public class CalculatorService {
 
-    //maintains a list of all file names and runs the aggregation on each file to calculate the output
+    /*
+     * Calculates difference between the last and the current operation timestamp
+     */
     public static long calculateDuration(AggregateModel oldModel, AggregateModel newModel) {
         Long duration = 0L;
         if (oldModel == null || newModel == null) {
@@ -28,7 +30,10 @@ public class CalculatorService {
         }
         return duration;
     }
-
+    
+    /*
+     * Calculates the final average
+     */
     public static double calculateAverage(AggregateModel model) {
         double avg = 0;
         try {

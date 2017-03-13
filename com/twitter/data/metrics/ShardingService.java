@@ -8,6 +8,7 @@ package com.twitter.data.metrics;
 import com.twitter.data.metrics.Util.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,13 +27,17 @@ public class ShardingService {
         this.shards = shards;
     }
 
+    /*
+     * This method is reponsible for populating the multiple shards
+     */
     public List<String> createShards(String inputFile) throws IOException {
         BufferedReader reader;
         BufferedReaderIterator readerIter;
+        File file = new File(inputFile);
         try {
             reader = FileUtil.openFile(inputFile);
             readerIter = new BufferedReaderIterator(reader);
-            createShardFiles(Constants.OUTPUT_PATH);
+            createShardFiles(file.getParent()+"/");
             for (String line : readerIter) {
                 String[] inputLine = line.split(Constants.SEPARATOR);
                 Long userId = Long.parseLong(inputLine[0]);
@@ -45,11 +50,13 @@ public class ShardingService {
             for (BufferedWriter w : writers) {
                 w.close();
             }
-
         }
-       return shardFiles;
+       return shardFiles;//return the file names for aggregator service
     }
     
+    /*
+     * This method creates multiple shards for the given file
+     */
     private void createShardFiles(String filePath) {
             String fileName;
             BufferedWriter writer = null;
@@ -68,7 +75,9 @@ public class ShardingService {
 
     }
     
-    
+    /*
+     * Write a line to a given shard
+     */
     private void addToShard(Long userId, String data) {
         try {
             writers.get((int) (userId % shards)).write(data);

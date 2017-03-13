@@ -6,10 +6,8 @@
 package com.twitter.data.metrics;
 
 import com.twitter.data.metrics.Util.Constants;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Properties;
 
 public class TwitterDataMetrics {
 
@@ -33,7 +31,13 @@ public class TwitterDataMetrics {
             MAX_USERS = Long.parseLong(args[1].trim());
             System.out.println("Max-Users = " + MAX_USERS);
             MEMORY = Long.parseLong(args[2].trim());
-            System.out.println("Memory = " + MEMORY);
+            System.out.println("Memory = " + MEMORY+"MB");
+            long heapSize = Runtime.getRuntime().totalMemory();
+            if(MEMORY*1024*1024 > heapSize){
+                            System.out.println("Not enough memory available for processing");
+                            return;
+
+            }
             POLICY = args[3].trim();
             System.out.println("Policy = " + POLICY);
 
@@ -45,6 +49,7 @@ public class TwitterDataMetrics {
             if (SHARDS == 0 || SHARDS == null) {
                 SHARDS = Constants.NUM_SHARDS;
             }
+            System.out.println("Shards = " + SHARDS);
             if (MAX_USERS != 0) {
                 ALLOC_PER_SHARD = MAX_USERS / SHARDS;
             }
@@ -57,12 +62,12 @@ public class TwitterDataMetrics {
             List<String> shardFiles = ss.createShards(input);
             //Loop until any new shards have been created
             while (shardFiles.size() > 0) {
-                System.out.println("Shards created");
+                System.out.println(shardFiles.size() + " Shards created");
                 AggregatorService as = new AggregatorService(shardFiles, POLICY, ALLOC_PER_SHARD);
                 //method returns new shard files for a shard too big for in-memory processing
                 shardFiles = as.aggregateData();
                 if (shardFiles.size() > 0) {
-                    System.out.println("processing new shard..." + shardFiles);
+                    System.out.println("processing new"+ shardFiles.size() +"shard...");
                 }
             }
         } catch (Exception e) {

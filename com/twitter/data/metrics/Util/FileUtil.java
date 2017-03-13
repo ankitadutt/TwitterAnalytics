@@ -55,18 +55,13 @@ public class FileUtil {
         }
     }
 
-    public static String createShard(String file) throws IOException {
-        if (file == null) {
-            return null;
-        }
-        File tempFile = File.createTempFile(file, ".tmp", new File(file));
-        tempFile.deleteOnExit();
-        return tempFile.getAbsolutePath();
-    }
-
     public static void createOutputFile(String file, Map<Long, AggregateModel> map) {
         if (file == null) {
             file = Constants.OUTPUT_PATH + Constants.OUTPUT_FILE;
+        }
+        else{
+            File f = new File(file);
+            file = f.getParent()+"/"+Constants.OUTPUT_FILE;
         }
         try (FileWriter fw = new FileWriter(file, true);
                 BufferedWriter bw = new BufferedWriter(fw);

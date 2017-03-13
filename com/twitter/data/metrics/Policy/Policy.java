@@ -13,12 +13,20 @@ import com.twitter.data.metrics.Model.AggregateModel;
  * @author ankita
  */
 public class Policy {
-
+        
+       /*
+        * Policy - Ignore the current entry in order to compensate for the missing entry.
+        * Helps with not messing with the current average duration
+        */
         public static AggregateModel ignoreFirstWrongEntry(AggregateModel prevLog, AggregateModel currLog) {
             AggregateModel policyUpdated = prevLog;
             return policyUpdated;
         }
-
+        
+        /*
+        * Policy - Assume that the missing operation happened at the same timestamp and calculate the toatl accordingly
+        * Eg. :If 2 consecutive "opens" are encountered then assume that a previous "close" happened at the same time as the new "open"
+        */
         public static AggregateModel updateDurationWithCurrent(AggregateModel prevLog, AggregateModel currLog) {
             AggregateModel policyUpdated = new AggregateModel();
             //Assume the previous operation to have closed now and add it to the aggregate
